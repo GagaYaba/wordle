@@ -3,6 +3,7 @@ import {
   createWord,
   InvalidWordCharactersError,
   InvalidWordLengthError,
+  type WordLength,
 } from '../../src/domain';
 
 describe('createWord', () => {
@@ -26,6 +27,62 @@ describe('createWord', () => {
 
     // Then
     expect(word).toBe('LIVRE');
+  });
+
+  it('Given no word length is provided, When creating a Word, Then it should default to 5 letters', () => {
+    // Given
+    const input = 'POMME';
+
+    // When
+    const word = createWord(input);
+
+    // Then
+    expect(word).toBe('POMME');
+  });
+
+  it('Given a 4-letter word and expected length 4, When creating a Word, Then it should be accepted', () => {
+    // Given
+    const input = 'lune';
+
+    // When
+    const word = createWord(input, 4);
+
+    // Then
+    expect(word).toBe('LUNE');
+  });
+
+  it('Given a 6-letter word and expected length 6, When creating a Word, Then it should be accepted', () => {
+    // Given
+    const input = 'cabane';
+
+    // When
+    const word = createWord(input, 6);
+
+    // Then
+    expect(word).toBe('CABANE');
+  });
+
+  it('Given a 4-letter word with expected length 5, When creating a Word, Then it should throw InvalidWordLengthError', () => {
+    // Given
+    const input = 'LUNE';
+
+    // When
+    const createFourLetterWordAsFiveLetterWord = () => createWord(input, 5);
+
+    // Then
+    expect(createFourLetterWordAsFiveLetterWord).toThrow(InvalidWordLengthError);
+  });
+
+  it('Given an unsupported word length, When creating a Word, Then it should throw InvalidWordLengthError', () => {
+    // Given
+    const input = 'SEPTLET';
+    const unsupportedLength = 7 as WordLength;
+
+    // When
+    const createUnsupportedWord = () => createWord(input, unsupportedLength);
+
+    // Then
+    expect(createUnsupportedWord).toThrow(InvalidWordLengthError);
   });
 
   it('Given a word shorter than 5 letters, When creating a Word, Then it should throw InvalidWordLengthError', () => {

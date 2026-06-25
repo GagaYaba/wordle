@@ -1,9 +1,9 @@
-import { createWord, type Word } from '../domain';
+import { createWord, isSupportedWordLength, SUPPORTED_WORD_LENGTHS, type Word, type WordLength } from '../domain';
 import { InMemoryDictionary } from './in-memory-dictionary';
 
 const FRENCH_WORD_LIST_URL = 'https://raw.githubusercontent.com/Taknok/French-Wordlist/master/francais.txt';
 const MIN_REMOTE_WORD_COUNT = 100;
-const FRENCH_FIVE_LETTER_WORD_PATTERN = /^[A-Z]{5}$/;
+const FRENCH_SUPPORTED_WORD_PATTERN = /^[A-Z]+$/;
 
 export function normalizeFrenchWord(input: string): string | null {
   const normalizedWord = input
@@ -14,14 +14,14 @@ export function normalizeFrenchWord(input: string): string | null {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
-  if (!FRENCH_FIVE_LETTER_WORD_PATTERN.test(normalizedWord)) {
+  if (!FRENCH_SUPPORTED_WORD_PATTERN.test(normalizedWord) || !isSupportedWordLength(normalizedWord.length)) {
     return null;
   }
 
   return normalizedWord;
 }
 
-export async function fetchFrenchFiveLetterWordList(): Promise<Word[]> {
+export async function fetchSupportedFrenchWordList(): Promise<Word[]> {
   const response = await fetch(FRENCH_WORD_LIST_URL);
 
   if (!response.ok) {
@@ -39,7 +39,7 @@ export async function fetchFrenchFiveLetterWordList(): Promise<Word[]> {
     }
 
     try {
-      wordsByValue.set(normalizedWord, createWord(normalizedWord));
+      wordsByValue.set(normalizedWord, createWord(normalizedWord, normalizedWord.length as WordLength));
     } catch {
       // Invalid remote entries are ignored so the dictionary only receives domain words.
     }
@@ -50,9 +50,9 @@ export async function fetchFrenchFiveLetterWordList(): Promise<Word[]> {
 
 export async function createFrenchDictionary(): Promise<InMemoryDictionary> {
   try {
-    const words = await fetchFrenchFiveLetterWordList();
+    const words = await fetchSupportedFrenchWordList();
 
-    if (words.length >= MIN_REMOTE_WORD_COUNT) {
+    if (words.length >= MIN_REMOTE_WORD_COUNT && hasWordsForEverySupportedLength(words)) {
       return new InMemoryDictionary(words);
     }
   } catch {
@@ -60,4 +60,8 @@ export async function createFrenchDictionary(): Promise<InMemoryDictionary> {
   }
 
   return new InMemoryDictionary();
+}
+
+function hasWordsForEverySupportedLength(words: readonly Word[]): boolean {
+  return SUPPORTED_WORD_LENGTHS.every((wordLength) => words.some((word) => word.length === wordLength));
 }

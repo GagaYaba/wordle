@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createWord } from '../../src/domain';
 import {
   createFrenchDictionary,
-  fetchFrenchFiveLetterWordList,
+  fetchSupportedFrenchWordList,
   normalizeFrenchWord,
 } from '../../src/infrastructure/french-word-list-loader';
 
@@ -18,16 +18,16 @@ describe('normalizeFrenchWord', () => {
   });
 });
 
-describe('fetchFrenchFiveLetterWordList', () => {
-  it('Given a remote word list with French words, When loading the list, Then it should return uppercase five-letter Word values', async () => {
+describe('fetchSupportedFrenchWordList', () => {
+  it('Given a remote word list with French words, When loading the list, Then it should return uppercase supported Word values', async () => {
     // Given
-    mockFetchText(['pomme', 'lapin', 'avion'].join('\n'));
+    mockFetchText(['chat', 'pomme', 'cabane'].join('\n'));
 
     // When
-    const words = await fetchFrenchFiveLetterWordList();
+    const words = await fetchSupportedFrenchWordList();
 
     // Then
-    expect(words).toEqual([createWord('POMME'), createWord('LAPIN'), createWord('AVION')]);
+    expect(words).toEqual([createWord('CHAT', 4), createWord('POMME'), createWord('CABANE', 6)]);
   });
 
   it('Given the remote word list contains accents, When loading the list, Then it should normalize accents', async () => {
@@ -35,7 +35,7 @@ describe('fetchFrenchFiveLetterWordList', () => {
     mockFetchText(['école', 'forêt'].join('\n'));
 
     // When
-    const words = await fetchFrenchFiveLetterWordList();
+    const words = await fetchSupportedFrenchWordList();
 
     // Then
     expect(words).toEqual([createWord('ECOLE'), createWord('FORET')]);
@@ -43,24 +43,29 @@ describe('fetchFrenchFiveLetterWordList', () => {
 
   it('Given the remote word list contains invalid words, When loading the list, Then it should filter them out', async () => {
     // Given
-    mockFetchText(['chat', 'maison', 'li4re', 'ab-cd', 'pomme'].join('\n'));
+    mockFetchText(['ami', 'maisons', 'li4re', 'ab-cd', 'pomme'].join('\n'));
 
     // When
-    const words = await fetchFrenchFiveLetterWordList();
+    const words = await fetchSupportedFrenchWordList();
 
     // Then
     expect(words).toEqual([createWord('POMME')]);
   });
 
-  it('Given the remote list contains words of many lengths, When loading the French word list, Then only five-letter words should be kept', async () => {
+  it('Given the remote list contains words of many lengths, When loading the French word list, Then only 4, 5 and 6-letter words should be kept', async () => {
     // Given
-    mockFetchText(['chat', 'pomme', 'zoologie', 'avion', 'zigzaguer', 'ecole'].join('\n'));
+    mockFetchText(['ami', 'chat', 'pomme', 'cabane', 'maison', 'maisons'].join('\n'));
 
     // When
-    const words = await fetchFrenchFiveLetterWordList();
+    const words = await fetchSupportedFrenchWordList();
 
     // Then
-    expect(words).toEqual([createWord('POMME'), createWord('AVION'), createWord('ECOLE')]);
+    expect(words).toEqual([
+      createWord('CHAT', 4),
+      createWord('POMME'),
+      createWord('CABANE', 6),
+      createWord('MAISON', 6),
+    ]);
   });
 
   it('Given duplicate words, When loading the list, Then it should remove duplicates', async () => {
@@ -68,7 +73,7 @@ describe('fetchFrenchFiveLetterWordList', () => {
     mockFetchText(['pomme', 'POMME', 'pomme'].join('\n'));
 
     // When
-    const words = await fetchFrenchFiveLetterWordList();
+    const words = await fetchSupportedFrenchWordList();
 
     // Then
     expect(words).toEqual([createWord('POMME')]);
@@ -84,7 +89,9 @@ describe('createFrenchDictionary', () => {
     const dictionary = await createFrenchDictionary();
 
     // Then
+    expect(dictionary.contains(createWord('CHAT', 4))).toBe(true);
     expect(dictionary.contains(createWord('POMME'))).toBe(true);
+    expect(dictionary.contains(createWord('CABANE', 6))).toBe(true);
     expect(dictionary.contains(createWord('LAPIN'))).toBe(true);
     expect(dictionary.contains(createWord('ECOLE'))).toBe(true);
   });
@@ -97,7 +104,9 @@ describe('createFrenchDictionary', () => {
     const dictionary = await createFrenchDictionary();
 
     // Then
+    expect(dictionary.contains(createWord('CHAT', 4))).toBe(true);
     expect(dictionary.contains(createWord('POMME'))).toBe(true);
+    expect(dictionary.contains(createWord('CABANE', 6))).toBe(true);
     expect(dictionary.contains(createWord('LIVRE'))).toBe(true);
   });
 
@@ -109,13 +118,15 @@ describe('createFrenchDictionary', () => {
     const dictionary = await createFrenchDictionary();
 
     // Then
+    expect(dictionary.contains(createWord('CHAT', 4))).toBe(true);
     expect(dictionary.contains(createWord('POMME'))).toBe(true);
+    expect(dictionary.contains(createWord('CABANE', 6))).toBe(true);
     expect(dictionary.contains(createWord('LAPIN'))).toBe(true);
     expect(dictionary.contains(createWord('ECOLE'))).toBe(true);
     expect(dictionary.contains(createWord('VILLE'))).toBe(true);
   });
 
-  it('Given the remote list contains POMME, LAPIN and ECOLE, When creating the French dictionary, Then it should contain those words', async () => {
+  it('Given the remote list contains words of 4, 5 and 6 letters, When creating the French dictionary, Then it should contain those words', async () => {
     // Given
     mockFetchText(buildLargeRemoteWordList(['pomme', 'lapin', 'école', 'océan']));
 
@@ -123,9 +134,11 @@ describe('createFrenchDictionary', () => {
     const dictionary = await createFrenchDictionary();
 
     // Then
+    expect(dictionary.contains(createWord('CHAT', 4))).toBe(true);
     expect(dictionary.contains(createWord('POMME'))).toBe(true);
     expect(dictionary.contains(createWord('LAPIN'))).toBe(true);
     expect(dictionary.contains(createWord('ECOLE'))).toBe(true);
+    expect(dictionary.contains(createWord('CABANE', 6))).toBe(true);
     expect(dictionary.contains(createWord('OCEAN'))).toBe(true);
   });
 });
@@ -169,5 +182,5 @@ function buildLargeRemoteWordList(requiredWords: string[]): string {
     return `ZZZ${firstLetter}${secondLetter}`;
   });
 
-  return [...requiredWords, ...validGeneratedWords].join('\n');
+  return ['chat', 'cabane', ...requiredWords, ...validGeneratedWords].join('\n');
 }

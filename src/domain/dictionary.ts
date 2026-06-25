@@ -1,6 +1,6 @@
-import type { Word } from './word';
+import type { Word, WordLength } from './word';
 
 export interface Dictionary {
   contains(word: Word): boolean;
-  pickRandomWord(): Word;
+  pickRandomWord(wordLength?: WordLength): Word;
 }

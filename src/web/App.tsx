@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import {
   createWord,
+  DEFAULT_WORD_LENGTH,
   GameAlreadyFinishedError,
   type GameState,
   InvalidWordCharactersError,
   InvalidWordLengthError,
   type LetterFeedback,
   MAX_ATTEMPTS,
+  SUPPORTED_WORD_LENGTHS,
+  type WordLength,
   WordleGame,
-  WORD_LENGTH,
   WordNotInDictionaryError,
 } from '../domain';
 import { createFrenchDictionary } from '../infrastructure/french-word-list-loader';
@@ -29,11 +31,14 @@ const FEEDBACK_PRIORITY: Record<LetterFeedback, number> = {
 type Tile = {
   letter: string;
   feedback?: LetterFeedback;
+  isHint?: boolean;
 };
 
 type KeyboardFeedbacks = Partial<Record<string, LetterFeedback>>;
+type ConfirmedLetters = Partial<Record<number, string>>;
 type HelpVariant = 'correct' | 'misplaced' | 'absent';
 type TileStyle = CSSProperties & { '--tile-delay': string };
+type GridStyle = CSSProperties & { '--word-length': number };
 
 export function App() {
   const [wordleGame, setWordleGame] = useState<WordleGame | null>(null);
@@ -41,6 +46,7 @@ export function App() {
   const [currentGuess, setCurrentGuess] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [selectedWordLength, setSelectedWordLength] = useState<WordLength>(DEFAULT_WORD_LENGTH);
   const [lastSubmittedRowIndex, setLastSubmittedRowIndex] = useState<number | null>(null);
   const [invalidRowIndex, setInvalidRowIndex] = useState<number | null>(null);
   const [invalidAttemptAnimationKey, setInvalidAttemptAnimationKey] = useState(0);
@@ -61,7 +67,7 @@ export function App() {
 
       const loadedGame = new WordleGame(dictionary);
       setWordleGame(loadedGame);
-      setGameState(loadedGame.start());
+      setGameState(loadedGame.start(DEFAULT_WORD_LENGTH));
     }
 
     void loadDictionary();
@@ -78,7 +84,7 @@ export function App() {
       }
 
       setCurrentGuess((previousGuess) => {
-        if (previousGuess.length >= WORD_LENGTH) {
+        if (previousGuess.length >= (gameState?.wordLength ?? selectedWordLength)) {
           return previousGuess;
         }
 
@@ -87,7 +93,7 @@ export function App() {
       setErrorMessage('');
       setInvalidRowIndex(null);
     },
-    [isGameFinished],
+    [gameState?.wordLength, isGameFinished, selectedWordLength],
   );
 
   const removeLastLetter = useCallback(() => {
@@ -106,7 +112,7 @@ export function App() {
     }
 
     try {
-      const playerGuess = createWord(currentGuess);
+      const playerGuess = createWord(currentGuess, gameState.wordLength);
       const updatedGame = wordleGame.play(gameState, playerGuess);
       const submittedRowIndex = gameState.attempts.length;
 
@@ -116,7 +122,7 @@ export function App() {
       setCurrentGuess('');
       setErrorMessage('');
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      setErrorMessage(getErrorMessage(error, gameState.wordLength));
       setInvalidRowIndex(gameState.attempts.length);
       setInvalidAttemptAnimationKey((currentKey) => currentKey + 1);
     }
@@ -184,7 +190,17 @@ export function App() {
       return;
     }
 
-    setGameState(wordleGame.start());
+    startGameWithLength(selectedWordLength);
+  }
+
+  function startGameWithLength(wordLength: WordLength) {
+    if (!wordleGame) {
+      setSelectedWordLength(wordLength);
+      return;
+    }
+
+    setSelectedWordLength(wordLength);
+    setGameState(wordleGame.start(wordLength));
     setCurrentGuess('');
     setErrorMessage('');
     setLastSubmittedRowIndex(null);
@@ -196,14 +212,18 @@ export function App() {
       <Header />
 
       <div className="game-container">
-        <button
-          className="help-floating-button"
-          type="button"
-          aria-label="Ouvrir l'aide"
-          onClick={() => setIsHelpOpen(true)}
-        >
-          ?
-        </button>
+        <div className="game-side-controls">
+          <button
+            className="help-floating-button"
+            type="button"
+            aria-label="Ouvrir l'aide"
+            onClick={() => setIsHelpOpen(true)}
+          >
+            ?
+          </button>
+
+          {gameState && <WordLengthSelector selectedWordLength={gameState.wordLength} onSelect={startGameWithLength} />}
+        </div>
 
         {!gameState ? (
           <section className="loading-panel" aria-live="polite">
@@ -254,6 +274,31 @@ export function App() {
 
       {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
     </main>
+  );
+}
+
+function WordLengthSelector({
+  onSelect,
+  selectedWordLength,
+}: {
+  onSelect: (wordLength: WordLength) => void;
+  selectedWordLength: WordLength;
+}) {
+  return (
+    <section className="word-length-selector" aria-label="Longueur du mot">
+      {SUPPORTED_WORD_LENGTHS.map((wordLength) => (
+        <button
+          className={`word-length-button${wordLength === selectedWordLength ? ' word-length-button--active' : ''}`}
+          key={wordLength}
+          type="button"
+          aria-label={`${wordLength} lettres`}
+          aria-pressed={wordLength === selectedWordLength}
+          onClick={() => onSelect(wordLength)}
+        >
+          {wordLength}
+        </button>
+      ))}
+    </section>
   );
 }
 
@@ -362,25 +407,33 @@ function GameGrid({
   rows: Tile[][];
 }) {
   return (
-    <section className="game-board" aria-label="Grille des tentatives">
+    <section
+      className="game-board"
+      aria-label={`Grille des tentatives, ${gameState.wordLength} lettres`}
+      style={{ '--word-length': gameState.wordLength } as GridStyle}
+    >
       <div className="grid-rows">
         {rows.map((row, rowIndex) => (
           <div
             className={getGridRowClassName(gameState, rowIndex, lastSubmittedRowIndex, invalidRowIndex)}
             key={getGridRowKey(rowIndex, invalidRowIndex, invalidAttemptAnimationKey)}
           >
-            {row.map((tile, tileIndex) => (
-              <div
-                className={`tile${tile.feedback ? ` tile--${tile.feedback.toLowerCase()}` : ''}${
-                  tile.letter && !tile.feedback ? ' tile--pending' : ''
-                }`}
-                key={`tile-${rowIndex}-${tileIndex}`}
-                style={{ '--tile-delay': `${tileIndex * 100}ms` } as TileStyle}
-                aria-label={tile.feedback ? `${tile.letter} ${tile.feedback}` : tile.letter || 'case vide'}
-              >
-                {tile.letter}
-              </div>
-            ))}
+            {row.map((tile, tileIndex) => {
+              const tileClassName = `tile${tile.feedback ? ` tile--${tile.feedback.toLowerCase()}` : ''}${
+                tile.letter && !tile.feedback && !tile.isHint ? ' tile--pending' : ''
+              }${tile.isHint ? ' tile--hint' : ''}`;
+
+              return (
+                <div
+                  className={tileClassName}
+                  key={`tile-${rowIndex}-${tileIndex}`}
+                  style={{ '--tile-delay': `${tileIndex * 100}ms` } as TileStyle}
+                  aria-label={getTileLabel(tile)}
+                >
+                  {tile.letter}
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>
@@ -464,6 +517,7 @@ function VirtualKeyboard({
 }
 
 function buildGridRows(gameState: GameState, currentGuess: string): Tile[][] {
+  const confirmedLetters = buildConfirmedLetters(gameState);
   const playedRows = gameState.attempts.map((attempt) =>
     attempt.letters.map((letterResult) => ({
       letter: letterResult.letter,
@@ -474,24 +528,30 @@ function buildGridRows(gameState: GameState, currentGuess: string): Tile[][] {
   const rows: Tile[][] = [...playedRows];
 
   if (gameState.status === 'IN_PROGRESS' && rows.length < MAX_ATTEMPTS) {
-    rows.push(buildCurrentGuessRow(currentGuess));
+    rows.push(buildCurrentGuessRow(currentGuess, gameState.wordLength, confirmedLetters));
   }
 
   while (rows.length < MAX_ATTEMPTS) {
-    rows.push(buildEmptyRow());
+    rows.push(buildEmptyRow(gameState.wordLength));
   }
 
   return rows.slice(0, MAX_ATTEMPTS);
 }
 
-function buildCurrentGuessRow(currentGuess: string): Tile[] {
-  return Array.from({ length: WORD_LENGTH }, (_, index) => ({
-    letter: currentGuess[index] ?? '',
-  }));
+function buildCurrentGuessRow(currentGuess: string, wordLength: WordLength, confirmedLetters: ConfirmedLetters): Tile[] {
+  return Array.from({ length: wordLength }, (_, index) => {
+    const typedLetter = currentGuess[index] ?? '';
+    const hintedLetter = typedLetter ? '' : (confirmedLetters[index] ?? '');
+
+    return {
+      letter: typedLetter || hintedLetter,
+      isHint: Boolean(hintedLetter),
+    };
+  });
 }
 
-function buildEmptyRow(): Tile[] {
-  return Array.from({ length: WORD_LENGTH }, () => ({
+function buildEmptyRow(wordLength: WordLength): Tile[] {
+  return Array.from({ length: wordLength }, () => ({
     letter: '',
   }));
 }
@@ -510,6 +570,30 @@ function buildKeyboardFeedbacks(gameState: GameState): KeyboardFeedbacks {
   }, {});
 }
 
+function buildConfirmedLetters(gameState: GameState): ConfirmedLetters {
+  return gameState.attempts.reduce<ConfirmedLetters>((confirmedLetters, attempt) => {
+    attempt.letters.forEach((letterResult) => {
+      if (letterResult.feedback === 'CORRECT') {
+        confirmedLetters[letterResult.position] = letterResult.letter;
+      }
+    });
+
+    return confirmedLetters;
+  }, {});
+}
+
+function getTileLabel(tile: Tile): string {
+  if (tile.feedback) {
+    return `${tile.letter} ${tile.feedback}`;
+  }
+
+  if (tile.isHint) {
+    return `${tile.letter} indice confirme`;
+  }
+
+  return tile.letter || 'case vide';
+}
+
 function getKeyboardLabel(key: string): string {
   if (key === 'ENTER') {
     return 'Entrée';
@@ -522,9 +606,9 @@ function getKeyboardLabel(key: string): string {
   return key;
 }
 
-function getErrorMessage(error: unknown): string {
+function getErrorMessage(error: unknown, wordLength: WordLength): string {
   if (error instanceof InvalidWordLengthError) {
-    return 'Le mot doit contenir exactement 5 lettres.';
+    return `Le mot doit contenir exactement ${wordLength} lettres.`;
   }
 
   if (error instanceof InvalidWordCharactersError) {

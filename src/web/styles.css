@@ -49,11 +49,18 @@ button {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.help-floating-button {
+.game-side-controls {
   position: absolute;
   top: var(--page-padding-y);
   right: 28px;
   z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.help-floating-button {
   width: clamp(50px, 6dvh, 56px);
   height: clamp(50px, 6dvh, 56px);
   border: 0;
@@ -147,8 +154,49 @@ button {
   font-weight: 800;
 }
 
+.word-length-selector {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.word-length-button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(190, 216, 232, 0.18);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #232a36;
+  color: #d7e2ec;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 950;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 120ms ease;
+}
+
+.word-length-button:hover {
+  transform: translateY(-1px);
+  background: #2d3544;
+}
+
+.word-length-button:active {
+  transform: scale(0.96);
+}
+
+.word-length-button--active {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #05070b;
+}
+
 .game-board {
-  width: min(100%, calc((var(--tile-size) * 5) + (var(--tile-gap) * 4)));
+  width: min(100%, calc((var(--tile-size) * var(--word-length)) + (var(--tile-gap) * (var(--word-length) - 1))));
   display: grid;
   place-items: center;
 }
@@ -160,7 +208,7 @@ button {
 
 .grid-row {
   display: grid;
-  grid-template-columns: repeat(5, var(--tile-size));
+  grid-template-columns: repeat(var(--word-length), var(--tile-size));
   gap: var(--tile-gap);
   justify-content: center;
 }
@@ -216,6 +264,13 @@ button {
   --tile-bg: #0b0e14;
   --tile-border: #7b8493;
   --tile-color: #f8fbff;
+}
+
+.tile--hint {
+  --tile-bg: #061014;
+  --tile-border: rgba(230, 235, 245, 0.35);
+  --tile-color: rgba(230, 235, 245, 0.52);
+  box-shadow: 0 0 0 1px rgba(230, 235, 245, 0.12);
 }
 
 .tile--correct {
@@ -687,13 +742,27 @@ button {
     padding-inline: 68px;
   }
 
-  .help-floating-button {
+  .game-side-controls {
     top: 8px;
     right: 10px;
+    gap: 7px;
+  }
+
+  .help-floating-button {
     width: 38px;
     height: 38px;
     border-radius: 8px;
     font-size: 1.15rem;
+  }
+
+  .word-length-selector {
+    gap: 6px;
+  }
+
+  .word-length-button {
+    width: 32px;
+    height: 32px;
+    font-size: 0.82rem;
   }
 
   .title-bubble {
@@ -714,7 +783,7 @@ button {
   }
 
   .game-board {
-    width: min(100%, 330px);
+    width: min(100%, 390px);
   }
 
   .grid-rows {
@@ -722,7 +791,7 @@ button {
   }
 
   .grid-row {
-    grid-template-columns: repeat(5, clamp(42px, 16vw, 56px));
+    grid-template-columns: repeat(var(--word-length), clamp(42px, 16vw, 56px));
     gap: 8px;
   }
 

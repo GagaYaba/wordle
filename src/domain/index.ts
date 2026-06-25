@@ -4,8 +4,8 @@ export { evaluateGuess } from './evaluate-guess';
 export type { LetterFeedback } from './feedback';
 export { MAX_ATTEMPTS, playGuess, startGame } from './game';
 export type { GameState, GameStatus } from './game';
-export { WORD_LENGTH, createWord } from './word';
-export type { Letter, Word } from './word';
+export { DEFAULT_WORD_LENGTH, SUPPORTED_WORD_LENGTHS, WORD_LENGTH, createWord, isSupportedWordLength } from './word';
+export type { Letter, Word, WordLength } from './word';
 export { WordleGame } from './wordle-game';
 export {
   GameAlreadyFinishedError,

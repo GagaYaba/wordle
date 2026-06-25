@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createWord, GameAlreadyFinishedError, playGuess, startGame } from '../../src/domain';
+import { createWord, GameAlreadyFinishedError, InvalidWordLengthError, playGuess, startGame } from '../../src/domain';
 
 describe('startGame', () => {
   it('Given a secret word, When starting a new game, Then the game should be in progress with 6 remaining attempts and no attempts', () => {
@@ -11,9 +11,23 @@ describe('startGame', () => {
 
     // Then
     expect(gameState.secretWord).toBe(secretWord);
+    expect(gameState.wordLength).toBe(5);
     expect(gameState.status).toBe('IN_PROGRESS');
     expect(gameState.remainingAttempts).toBe(6);
     expect(gameState.attempts).toEqual([]);
+  });
+
+  it('Given a 4-letter secret word, When starting a new game, Then the game should track the selected word length', () => {
+    // Given
+    const secretWord = createWord('LUNE', 4);
+
+    // When
+    const gameState = startGame(secretWord, 4);
+
+    // Then
+    expect(gameState.secretWord).toBe(secretWord);
+    expect(gameState.wordLength).toBe(4);
+    expect(gameState.remainingAttempts).toBe(6);
   });
 });
 
@@ -32,6 +46,19 @@ describe('playGuess', () => {
     expect(nextGameState.attempts[0]?.guessedWord).toBe(playerGuess);
     expect(nextGameState.remainingAttempts).toBe(5);
     expect(nextGameState.status).toBe('IN_PROGRESS');
+  });
+
+  it('Given a 4-letter game, When the player submits a 5-letter guess, Then it should throw InvalidWordLengthError', () => {
+    // Given
+    const secretWord = createWord('LUNE', 4);
+    const playerGuess = createWord('LIVRE');
+    const gameState = startGame(secretWord);
+
+    // When
+    const playWrongLengthGuess = () => playGuess(gameState, playerGuess);
+
+    // Then
+    expect(playWrongLengthGuess).toThrow(InvalidWordLengthError);
   });
 
   it('Given an in-progress game, When the player guesses the secret word, Then the game should be won', () => {

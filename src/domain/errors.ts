@@ -7,8 +7,8 @@ export class GameError extends Error {
 }
 
 export class InvalidWordLengthError extends GameError {
-  constructor(word: string) {
-    super(`Invalid word length for "${word}". A Word must contain exactly 5 letters.`);
+  constructor(word: string, expectedLength = 5) {
+    super(`Invalid word length for "${word}". A Word must contain exactly ${expectedLength} letters.`);
     this.name = 'InvalidWordLengthError';
   }
 }

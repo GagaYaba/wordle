@@ -18,6 +18,16 @@ La source distante utilisée est `https://raw.githubusercontent.com/Taknok/Frenc
 
 Une règle importante concerne les lettres multiples : si une lettre est proposée plusieurs fois mais qu'elle existe moins de fois dans le mot secret, seules les occurrences disponibles peuvent être marquées `CORRECT` ou `MISPLACED`. Les occurrences en trop sont marquées `ABSENT`.
 
+## Bonus 4 / 5 / 6 lettres
+
+Le mode 5 lettres reste le mode par defaut et reste conforme au sujet d'evaluation.
+
+En bonus, l'interface permet de choisir une partie en 4, 5 ou 6 lettres. Changer de longueur demarre une nouvelle partie, adapte la grille et conserve les 6 tentatives maximum.
+
+Le dictionnaire distant est charge une seule fois puis filtre pour ne garder que les mots alphabetiques de 4, 5 ou 6 lettres. Le fallback local contient aussi des mots de ces trois longueurs.
+
+Les tests couvrent la validation des longueurs dynamiques, le feedback Wordle en 4 et 6 lettres, le dictionnaire par longueur, le loader distant et le selecteur web.
+
 ## Choix techniques
 
 - TypeScript : types expressifs et sécurité autour du domaine.

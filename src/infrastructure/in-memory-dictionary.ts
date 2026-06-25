@@ -1,4 +1,4 @@
-import type { Dictionary, Word } from '../domain';
+import { DEFAULT_WORD_LENGTH, isSupportedWordLength, type Dictionary, type Word, type WordLength } from '../domain';
 import { DEFAULT_FRENCH_WORDS } from './default-french-words';
 
 export class InMemoryDictionary implements Dictionary {
@@ -12,9 +12,19 @@ export class InMemoryDictionary implements Dictionary {
     return this.words.includes(word);
   }
 
-  pickRandomWord(): Word {
-    const randomIndex = Math.floor(Math.random() * this.words.length);
+  pickRandomWord(wordLength: WordLength = DEFAULT_WORD_LENGTH): Word {
+    if (!isSupportedWordLength(wordLength)) {
+      throw new Error(`Unsupported word length "${wordLength}"`);
+    }
 
-    return this.words[randomIndex];
+    const wordsForLength = this.words.filter((word) => word.length === wordLength);
+
+    if (wordsForLength.length === 0) {
+      throw new Error(`InMemoryDictionary has no word with ${wordLength} letters`);
+    }
+
+    const randomIndex = Math.floor(Math.random() * wordsForLength.length);
+
+    return wordsForLength[randomIndex];
   }
 }

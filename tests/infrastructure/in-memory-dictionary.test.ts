@@ -83,4 +83,63 @@ describe('InMemoryDictionary', () => {
     // Then
     expect(words).toContain(pickedWord);
   });
+
+  it('Given words of length 4, 5 and 6, When picking a random word for length 4, Then the returned word should have 4 letters', () => {
+    // Given
+    const dictionary = new InMemoryDictionary([createWord('LUNE', 4), createWord('LIVRE'), createWord('CABANE', 6)]);
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    // When
+    const pickedWord = dictionary.pickRandomWord(4);
+
+    // Then
+    expect(pickedWord).toHaveLength(4);
+  });
+
+  it('Given words of length 4, 5 and 6, When picking a random word for length 5, Then the returned word should have 5 letters', () => {
+    // Given
+    const dictionary = new InMemoryDictionary([createWord('LUNE', 4), createWord('LIVRE'), createWord('CABANE', 6)]);
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    // When
+    const pickedWord = dictionary.pickRandomWord(5);
+
+    // Then
+    expect(pickedWord).toHaveLength(5);
+  });
+
+  it('Given words of length 4, 5 and 6, When picking a random word for length 6, Then the returned word should have 6 letters', () => {
+    // Given
+    const dictionary = new InMemoryDictionary([createWord('LUNE', 4), createWord('LIVRE'), createWord('CABANE', 6)]);
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    // When
+    const pickedWord = dictionary.pickRandomWord(6);
+
+    // Then
+    expect(pickedWord).toHaveLength(6);
+  });
+
+  it('Given no length is provided, When picking a random word, Then it should default to 5 letters', () => {
+    // Given
+    const dictionary = new InMemoryDictionary([createWord('LUNE', 4), createWord('LIVRE'), createWord('CABANE', 6)]);
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    // When
+    const pickedWord = dictionary.pickRandomWord();
+
+    // Then
+    expect(pickedWord).toHaveLength(5);
+  });
+
+  it('Given no word exists for the requested length, When picking a random word, Then it should throw an infrastructure error', () => {
+    // Given
+    const dictionary = new InMemoryDictionary([createWord('LIVRE')]);
+
+    // When
+    const pickMissingLength = () => dictionary.pickRandomWord(4);
+
+    // Then
+    expect(pickMissingLength).toThrow('InMemoryDictionary has no word with 4 letters');
+  });
 });

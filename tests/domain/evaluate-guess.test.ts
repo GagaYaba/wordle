@@ -58,6 +58,44 @@ describe('evaluateGuess', () => {
       { letter: 'X', position: 4, feedback: 'ABSENT' },
     ]);
   });
+
+  it('Given a 4-letter secret word and the exact same guess, When evaluating the guess, Then every letter should be marked as CORRECT', () => {
+    // Given
+    const secretWord = createWord('LUNE', 4);
+    const playerGuess = createWord('LUNE', 4);
+
+    // When
+    const result = evaluateGuess(secretWord, playerGuess);
+
+    // Then
+    expect(result.guessedWord).toBe(playerGuess);
+    expect(result.letters).toEqual([
+      { letter: 'L', position: 0, feedback: 'CORRECT' },
+      { letter: 'U', position: 1, feedback: 'CORRECT' },
+      { letter: 'N', position: 2, feedback: 'CORRECT' },
+      { letter: 'E', position: 3, feedback: 'CORRECT' },
+    ]);
+  });
+
+  it('Given a 6-letter secret word and a valid guess, When evaluating the guess, Then feedback should be returned for all 6 letters', () => {
+    // Given
+    const secretWord = createWord('CABANE', 6);
+    const playerGuess = createWord('BANANE', 6);
+
+    // When
+    const result = evaluateGuess(secretWord, playerGuess);
+
+    // Then
+    expect(result.guessedWord).toBe(playerGuess);
+    expect(result.letters).toEqual([
+      { letter: 'B', position: 0, feedback: 'MISPLACED' },
+      { letter: 'A', position: 1, feedback: 'CORRECT' },
+      { letter: 'N', position: 2, feedback: 'ABSENT' },
+      { letter: 'A', position: 3, feedback: 'CORRECT' },
+      { letter: 'N', position: 4, feedback: 'CORRECT' },
+      { letter: 'E', position: 5, feedback: 'CORRECT' },
+    ]);
+  });
 });
 
 describe('evaluateGuess - multiple letters rule', () => {
@@ -172,6 +210,26 @@ describe('evaluateGuess - multiple letters rule', () => {
       { letter: 'B', position: 2, feedback: 'CORRECT' },
       { letter: 'B', position: 3, feedback: 'ABSENT' },
       { letter: 'B', position: 4, feedback: 'ABSENT' },
+    ]);
+  });
+
+  it('Given a 6-letter guess with extra repeated letters, When evaluating the guess, Then unavailable occurrences should be ABSENT', () => {
+    // Given
+    const secretWord = createWord('CABANE', 6);
+    const playerGuess = createWord('BANANA', 6);
+
+    // When
+    const result = evaluateGuess(secretWord, playerGuess);
+
+    // Then
+    expect(result.guessedWord).toBe(playerGuess);
+    expect(result.letters).toEqual([
+      { letter: 'B', position: 0, feedback: 'MISPLACED' },
+      { letter: 'A', position: 1, feedback: 'CORRECT' },
+      { letter: 'N', position: 2, feedback: 'ABSENT' },
+      { letter: 'A', position: 3, feedback: 'CORRECT' },
+      { letter: 'N', position: 4, feedback: 'CORRECT' },
+      { letter: 'A', position: 5, feedback: 'ABSENT' },
     ]);
   });
 });
