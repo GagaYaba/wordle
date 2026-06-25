@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import {
   createWord,
   GameAlreadyFinishedError,
@@ -33,6 +33,7 @@ type Tile = {
 
 type KeyboardFeedbacks = Partial<Record<string, LetterFeedback>>;
 type HelpVariant = 'correct' | 'misplaced' | 'absent';
+type TileStyle = CSSProperties & { '--tile-delay': string };
 
 export function App() {
   const [wordleGame, setWordleGame] = useState<WordleGame | null>(null);
@@ -40,6 +41,9 @@ export function App() {
   const [currentGuess, setCurrentGuess] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [lastSubmittedRowIndex, setLastSubmittedRowIndex] = useState<number | null>(null);
+  const [invalidRowIndex, setInvalidRowIndex] = useState<number | null>(null);
+  const [invalidAttemptAnimationKey, setInvalidAttemptAnimationKey] = useState(0);
 
   const isGameFinished = gameState?.status !== 'IN_PROGRESS';
   const rows = useMemo(() => (gameState ? buildGridRows(gameState, currentGuess) : []), [currentGuess, gameState]);
@@ -81,6 +85,7 @@ export function App() {
         return `${previousGuess}${letter.toUpperCase()}`;
       });
       setErrorMessage('');
+      setInvalidRowIndex(null);
     },
     [isGameFinished],
   );
@@ -92,6 +97,7 @@ export function App() {
 
     setCurrentGuess((previousGuess) => previousGuess.slice(0, -1));
     setErrorMessage('');
+    setInvalidRowIndex(null);
   }, [isGameFinished]);
 
   const submitGuess = useCallback(() => {
@@ -102,12 +108,17 @@ export function App() {
     try {
       const playerGuess = createWord(currentGuess);
       const updatedGame = wordleGame.play(gameState, playerGuess);
+      const submittedRowIndex = gameState.attempts.length;
 
+      setLastSubmittedRowIndex(submittedRowIndex);
+      setInvalidRowIndex(null);
       setGameState(updatedGame);
       setCurrentGuess('');
       setErrorMessage('');
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
+      setInvalidRowIndex(gameState.attempts.length);
+      setInvalidAttemptAnimationKey((currentKey) => currentKey + 1);
     }
   }, [currentGuess, gameState, isGameFinished, wordleGame]);
 
@@ -176,6 +187,8 @@ export function App() {
     setGameState(wordleGame.start());
     setCurrentGuess('');
     setErrorMessage('');
+    setLastSubmittedRowIndex(null);
+    setInvalidRowIndex(null);
   }
 
   return (
@@ -199,7 +212,13 @@ export function App() {
         ) : (
           <>
             <section className="game-stage" aria-label="Plateau Wordle">
-              <GameGrid rows={rows} />
+              <GameGrid
+                gameState={gameState}
+                invalidAttemptAnimationKey={invalidAttemptAnimationKey}
+                invalidRowIndex={invalidRowIndex}
+                lastSubmittedRowIndex={lastSubmittedRowIndex}
+                rows={rows}
+              />
 
               <section className="status-panel" aria-label="Etat de la partie">
                 <p className="attempts">{gameState.remainingAttempts} tentative(s)</p>
@@ -329,18 +348,34 @@ function HelpExample({
   );
 }
 
-function GameGrid({ rows }: { rows: Tile[][] }) {
+function GameGrid({
+  gameState,
+  invalidAttemptAnimationKey,
+  invalidRowIndex,
+  lastSubmittedRowIndex,
+  rows,
+}: {
+  gameState: GameState;
+  invalidAttemptAnimationKey: number;
+  invalidRowIndex: number | null;
+  lastSubmittedRowIndex: number | null;
+  rows: Tile[][];
+}) {
   return (
     <section className="game-board" aria-label="Grille des tentatives">
       <div className="grid-rows">
         {rows.map((row, rowIndex) => (
-          <div className="grid-row" key={`row-${rowIndex}`}>
+          <div
+            className={getGridRowClassName(gameState, rowIndex, lastSubmittedRowIndex, invalidRowIndex)}
+            key={getGridRowKey(rowIndex, invalidRowIndex, invalidAttemptAnimationKey)}
+          >
             {row.map((tile, tileIndex) => (
               <div
                 className={`tile${tile.feedback ? ` tile--${tile.feedback.toLowerCase()}` : ''}${
                   tile.letter && !tile.feedback ? ' tile--pending' : ''
                 }`}
                 key={`tile-${rowIndex}-${tileIndex}`}
+                style={{ '--tile-delay': `${tileIndex * 100}ms` } as TileStyle}
                 aria-label={tile.feedback ? `${tile.letter} ${tile.feedback}` : tile.letter || 'case vide'}
               >
                 {tile.letter}
@@ -351,6 +386,42 @@ function GameGrid({ rows }: { rows: Tile[][] }) {
       </div>
     </section>
   );
+}
+
+function getGridRowClassName(
+  gameState: GameState,
+  rowIndex: number,
+  lastSubmittedRowIndex: number | null,
+  invalidRowIndex: number | null,
+): string {
+  const classes = ['grid-row'];
+  const lastPlayedRowIndex = gameState.attempts.length - 1;
+
+  if (rowIndex === lastSubmittedRowIndex) {
+    classes.push('is-revealing');
+  }
+
+  if (rowIndex === invalidRowIndex) {
+    classes.push('is-shaking');
+  }
+
+  if (gameState.status === 'WON' && rowIndex === lastPlayedRowIndex) {
+    classes.push('is-winning');
+  }
+
+  if (gameState.status === 'LOST' && rowIndex === lastPlayedRowIndex) {
+    classes.push('is-losing');
+  }
+
+  return classes.join(' ');
+}
+
+function getGridRowKey(rowIndex: number, invalidRowIndex: number | null, invalidAttemptAnimationKey: number): string {
+  if (rowIndex === invalidRowIndex) {
+    return `row-${rowIndex}-invalid-${invalidAttemptAnimationKey}`;
+  }
+
+  return `row-${rowIndex}`;
 }
 
 function VirtualKeyboard({

@@ -65,10 +65,18 @@ button {
   place-items: center;
   font-size: 1.45rem;
   font-weight: 850;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
 }
 
 .help-floating-button:hover {
+  transform: translateY(-1px);
   background: #5a6576;
+}
+
+.help-floating-button:active {
+  transform: scale(0.96);
 }
 
 .wordle-title {
@@ -157,45 +165,78 @@ button {
   justify-content: center;
 }
 
+.grid-row.is-revealing .tile {
+  animation: tileFlip 560ms cubic-bezier(0.2, 0.72, 0.22, 1) var(--tile-delay) both;
+}
+
+.grid-row.is-shaking {
+  animation: rowShake 300ms ease-in-out both;
+}
+
+.grid-row.is-losing {
+  animation: rowShake 360ms ease-in-out 680ms both;
+}
+
+.grid-row.is-winning .tile {
+  animation: tileBounce 520ms ease-out calc(var(--tile-delay) + 620ms);
+}
+
+.grid-row.is-revealing.is-winning .tile {
+  animation:
+    tileFlip 560ms cubic-bezier(0.2, 0.72, 0.22, 1) var(--tile-delay) both,
+    tileBounce 520ms ease-out calc(var(--tile-delay) + 620ms);
+}
+
 .tile {
+  --tile-bg: #06080c;
+  --tile-border: #40454f;
+  --tile-color: #f8fbff;
   width: var(--tile-size);
   height: var(--tile-size);
-  border: 2px solid #40454f;
+  border: 2px solid var(--tile-border);
   border-radius: 9px;
   display: grid;
   place-items: center;
-  background: #06080c;
-  color: #f8fbff;
+  background: var(--tile-bg);
+  color: var(--tile-color);
   font-size: clamp(1.32rem, 3dvh, 1.58rem);
   font-weight: 950;
   line-height: 1;
   text-transform: uppercase;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+  will-change: transform;
 }
 
 .tile--pending {
-  border-color: #7b8493;
-  background: #0b0e14;
+  --tile-bg: #0b0e14;
+  --tile-border: #7b8493;
+  --tile-color: #f8fbff;
 }
 
 .tile--correct {
-  border-color: #32c9bd;
+  --tile-bg: #32c9bd;
+  --tile-border: #32c9bd;
+  --tile-color: #031215;
   border-radius: 50%;
-  background: #32c9bd;
-  color: #031215;
 }
 
 .tile--misplaced {
-  border-color: #ffe246;
+  --tile-bg: #ffe246;
+  --tile-border: #ffe246;
+  --tile-color: #15110a;
   border-radius: 50%;
-  background: #ffe246;
-  color: #15110a;
 }
 
 .tile--absent {
-  border-color: #334154;
+  --tile-bg: #334154;
+  --tile-border: #334154;
+  --tile-color: #ffffff;
   border-radius: 50%;
-  background: #334154;
-  color: #ffffff;
 }
 
 .status-panel {
@@ -226,11 +267,13 @@ button {
 .message--success {
   background: rgba(50, 201, 189, 0.17);
   color: #8ff5ed;
+  animation: messageFadeIn 360ms ease-out both;
 }
 
 .message--loss {
   background: rgba(255, 226, 70, 0.14);
   color: #ffe66c;
+  animation: messageFadeIn 360ms ease-out both;
 }
 
 .message--error {
@@ -254,11 +297,20 @@ button {
   font-size: 1rem;
   font-weight: 950;
   letter-spacing: 0;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 120ms ease;
 }
 
 .verify-button:hover:not(:disabled) {
   transform: translateY(-1px);
   background: #43ddd2;
+  box-shadow: 0 0 22px rgba(51, 207, 195, 0.34);
+}
+
+.verify-button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .verify-button:disabled {
@@ -276,9 +328,13 @@ button {
   padding: 0 16px;
   font-size: 0.84rem;
   font-weight: 850;
+  transition:
+    background-color 160ms ease,
+    transform 120ms ease;
 }
 
 .new-game-button:hover {
+  transform: translateY(-1px);
   background: #253246;
 }
 
@@ -307,11 +363,20 @@ button {
   font-size: clamp(1.1rem, 2.5dvh, 1.34rem);
   font-weight: 950;
   text-transform: uppercase;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 120ms ease,
+    opacity 180ms ease;
 }
 
 .keyboard-key:hover:not(:disabled) {
   transform: translateY(-1px);
   background: #828b99;
+}
+
+.keyboard-key:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .keyboard-key:disabled {
@@ -348,6 +413,7 @@ button {
   place-items: center;
   padding: 24px;
   background: rgba(0, 0, 0, 0.58);
+  animation: overlayFadeIn 180ms ease-out both;
 }
 
 .help-modal {
@@ -361,6 +427,7 @@ button {
   color: #f2f4f7;
   padding: 28px 30px 24px;
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.48);
+  animation: modalEnter 220ms ease-out both;
 }
 
 .help-modal h2 {
@@ -464,6 +531,119 @@ button {
 
 .help-example-letter--absent {
   color: #8190a6;
+}
+
+@keyframes tileFlip {
+  0% {
+    background: #06080c;
+    border-color: #40454f;
+    color: #f8fbff;
+    transform: rotateX(0deg);
+  }
+
+  44% {
+    background: #06080c;
+    border-color: #40454f;
+    color: transparent;
+    transform: rotateX(88deg);
+  }
+
+  56% {
+    background: var(--tile-bg);
+    border-color: var(--tile-border);
+    color: transparent;
+    transform: rotateX(88deg);
+  }
+
+  100% {
+    background: var(--tile-bg);
+    border-color: var(--tile-border);
+    color: var(--tile-color);
+    transform: rotateX(0deg);
+  }
+}
+
+@keyframes rowShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  18% {
+    transform: translateX(-6px);
+  }
+
+  36% {
+    transform: translateX(6px);
+  }
+
+  54% {
+    transform: translateX(-4px);
+  }
+
+  72% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes tileBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  40% {
+    transform: translateY(-8px);
+  }
+
+  70% {
+    transform: translateY(2px);
+  }
+}
+
+@keyframes messageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @media (max-width: 760px) {
