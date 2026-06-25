@@ -89,6 +89,18 @@ describe('createFrenchDictionary', () => {
     expect(dictionary.contains(createWord('ECOLE'))).toBe(true);
   });
 
+  it('Given the remote word list responds with a non-OK status, When creating the French dictionary, Then it should fall back to the local default dictionary', async () => {
+    // Given
+    mockFetchNonOkResponse();
+
+    // When
+    const dictionary = await createFrenchDictionary();
+
+    // Then
+    expect(dictionary.contains(createWord('POMME'))).toBe(true);
+    expect(dictionary.contains(createWord('LIVRE'))).toBe(true);
+  });
+
   it('Given the remote list is too small, When creating the French dictionary, Then it should use the fallback dictionary', async () => {
     // Given
     mockFetchText(['pomme', 'lapin', 'ecole'].join('\n'));
@@ -124,6 +136,18 @@ function mockFetchText(payload: string) {
       ok: true,
       text: async () => payload,
     }) as Response,
+  );
+
+  vi.stubGlobal('fetch', fetchMock);
+}
+
+function mockFetchNonOkResponse() {
+  const fetchMock: typeof fetch = vi.fn(async () =>
+    ({
+      ok: false,
+      status: 500,
+      text: vi.fn(),
+    }) as unknown as Response,
   );
 
   vi.stubGlobal('fetch', fetchMock);

@@ -82,4 +82,15 @@ describe('createWord', () => {
     // Then
     expect(createWordWithSpace).toThrow(InvalidWordCharactersError);
   });
+
+  it('Given a word containing an accent, When creating a domain Word directly, Then it should throw InvalidWordCharactersError', () => {
+    // Given
+    const input = '\u00e9cole';
+
+    // When
+    const createWordWithAccent = () => createWord(input);
+
+    // Then
+    expect(createWordWithAccent).toThrow(InvalidWordCharactersError);
+  });
 });
