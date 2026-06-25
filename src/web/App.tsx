@@ -32,12 +32,14 @@ type Tile = {
 };
 
 type KeyboardFeedbacks = Partial<Record<string, LetterFeedback>>;
+type HelpVariant = 'correct' | 'misplaced' | 'absent';
 
 export function App() {
   const wordleGame = useMemo(() => new WordleGame(new InMemoryDictionary()), []);
   const [gameState, setGameState] = useState<GameState>(() => wordleGame.start());
   const [currentGuess, setCurrentGuess] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   const isGameFinished = gameState.status !== 'IN_PROGRESS';
   const rows = buildGridRows(gameState, currentGuess);
@@ -89,6 +91,15 @@ export function App() {
 
   useEffect(() => {
     function handlePhysicalKeyboard(event: KeyboardEvent) {
+      if (isHelpOpen) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          setIsHelpOpen(false);
+        }
+
+        return;
+      }
+
       if (event.ctrlKey || event.metaKey || event.altKey) {
         return;
       }
@@ -114,7 +125,7 @@ export function App() {
     window.addEventListener('keydown', handlePhysicalKeyboard);
 
     return () => window.removeEventListener('keydown', handlePhysicalKeyboard);
-  }, [appendLetter, removeLastLetter, submitGuess]);
+  }, [appendLetter, isHelpOpen, removeLastLetter, submitGuess]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -146,6 +157,15 @@ export function App() {
       <Header />
 
       <div className="game-container">
+        <button
+          className="help-floating-button"
+          type="button"
+          aria-label="Ouvrir l'aide"
+          onClick={() => setIsHelpOpen(true)}
+        >
+          ?
+        </button>
+
         <section className="game-stage" aria-label="Plateau Wordle">
           <GameGrid rows={rows} />
 
@@ -178,6 +198,8 @@ export function App() {
           onKeyPress={handleKeyboardKey}
         />
       </div>
+
+      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
     </main>
   );
 }
@@ -185,12 +207,6 @@ export function App() {
 function Header() {
   return (
     <header className="top-bar">
-      <div className="toolbar-group" aria-label="Actions secondaires">
-        <button className="icon-button" type="button" aria-label="Statistiques">
-          📊
-        </button>
-      </div>
-
       <h1 className="wordle-title" aria-label="WORDLE">
         {TITLE_LETTERS.map((letter, index) => (
           <span className={`title-bubble title-bubble--${index}`} key={`${letter}-${index}`} aria-hidden="true">
@@ -198,16 +214,84 @@ function Header() {
           </span>
         ))}
       </h1>
-
-      <div className="toolbar-group toolbar-group--right" aria-label="Aide et menu">
-        <button className="icon-button" type="button" aria-label="Aide">
-          ?
-        </button>
-        <button className="icon-button" type="button" aria-label="Menu">
-          ≡
-        </button>
-      </div>
     </header>
+  );
+}
+
+function HelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="help-overlay" onClick={onClose}>
+      <section
+        aria-labelledby="help-modal-title"
+        aria-modal="true"
+        className="help-modal"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <button className="help-close-button" type="button" aria-label="Fermer l'aide" onClick={onClose}>
+          ×
+        </button>
+
+        <h2 id="help-modal-title">Comment jouer ?</h2>
+
+        <p>Devinez le mot en six essais. Chaque essai doit être un mot valide.</p>
+        <p>Après chaque essai, les lettres changent de couleur selon leur proximité avec la solution.</p>
+
+        <div className="help-examples" aria-label="Exemples de feedback">
+          <HelpExample
+            highlightedLetter="P"
+            letters={['P', 'O', 'M', 'M', 'E']}
+            text="est la bonne lettre à la bonne place"
+            variant="correct"
+          />
+          <HelpExample
+            highlightedLetter="N"
+            letters={['L', 'A', 'P', 'I', 'N']}
+            text="n'est pas dans le mot"
+            variant="absent"
+          />
+          <HelpExample
+            highlightedLetter="E"
+            letters={['F', 'L', 'E', 'U', 'R']}
+            text="est la bonne lettre à la mauvaise place"
+            variant="misplaced"
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function HelpExample({
+  highlightedLetter,
+  letters,
+  text,
+  variant,
+}: {
+  highlightedLetter: string;
+  letters: string[];
+  text: string;
+  variant: HelpVariant;
+}) {
+  return (
+    <div className="help-example">
+      <div className="help-example-word" aria-label={letters.join('')}>
+        {letters.map((letter, index) => (
+          <span
+            className={`help-example-tile${letter === highlightedLetter ? ` help-example-tile--${variant}` : ''}`}
+            key={`${letter}-${index}`}
+          >
+            {letter}
+          </span>
+        ))}
+      </div>
+      <p>
+        <span className={`help-example-letter help-example-letter--${variant}`}>
+          {highlightedLetter}
+        </span>{' '}
+        {text}
+      </p>
+    </div>
   );
 }
 
