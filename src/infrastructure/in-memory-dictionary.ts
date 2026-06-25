@@ -1,26 +1,8 @@
 import type { Dictionary, Word } from '../domain';
-import { createWord } from '../domain';
-
-const DEFAULT_WORDS: readonly Word[] = [
-  'LIVRE',
-  'TABLE',
-  'CHIEN',
-  'RADIO',
-  'CANAL',
-  'BALLE',
-  'PORTE',
-  'ROUTE',
-  'PLAGE',
-  'FLEUR',
-  'MONDE',
-  'CARTE',
-  'PIANO',
-  'NUAGE',
-  'TERRE',
-].map(createWord);
+import { DEFAULT_FRENCH_WORDS } from './default-french-words';
 
 export class InMemoryDictionary implements Dictionary {
-  constructor(private readonly words: readonly Word[] = DEFAULT_WORDS) {
+  constructor(private readonly words: readonly Word[] = DEFAULT_FRENCH_WORDS) {
     if (words.length === 0) {
       throw new Error('InMemoryDictionary requires at least one word');
     }

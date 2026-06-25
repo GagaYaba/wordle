@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { InMemoryDictionary } from '../infrastructure/in-memory-dictionary';
 import {
   createWord,
   GameAlreadyFinishedError,
@@ -12,6 +11,7 @@ import {
   WORD_LENGTH,
   WordNotInDictionaryError,
 } from '../domain';
+import { createFrenchDictionary } from '../infrastructure/french-word-list-loader';
 import './styles.css';
 
 const TITLE_LETTERS = ['W', 'O', 'R', 'D', 'L', 'E'];
@@ -35,15 +35,37 @@ type KeyboardFeedbacks = Partial<Record<string, LetterFeedback>>;
 type HelpVariant = 'correct' | 'misplaced' | 'absent';
 
 export function App() {
-  const wordleGame = useMemo(() => new WordleGame(new InMemoryDictionary()), []);
-  const [gameState, setGameState] = useState<GameState>(() => wordleGame.start());
+  const [wordleGame, setWordleGame] = useState<WordleGame | null>(null);
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [currentGuess, setCurrentGuess] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
-  const isGameFinished = gameState.status !== 'IN_PROGRESS';
-  const rows = buildGridRows(gameState, currentGuess);
-  const keyboardFeedbacks = buildKeyboardFeedbacks(gameState);
+  const isGameFinished = gameState?.status !== 'IN_PROGRESS';
+  const rows = useMemo(() => (gameState ? buildGridRows(gameState, currentGuess) : []), [currentGuess, gameState]);
+  const keyboardFeedbacks = useMemo(() => (gameState ? buildKeyboardFeedbacks(gameState) : {}), [gameState]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDictionary() {
+      const dictionary = await createFrenchDictionary();
+
+      if (!isMounted) {
+        return;
+      }
+
+      const loadedGame = new WordleGame(dictionary);
+      setWordleGame(loadedGame);
+      setGameState(loadedGame.start());
+    }
+
+    void loadDictionary();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const appendLetter = useCallback(
     (letter: string) => {
@@ -73,7 +95,7 @@ export function App() {
   }, [isGameFinished]);
 
   const submitGuess = useCallback(() => {
-    if (isGameFinished) {
+    if (!gameState || !wordleGame || isGameFinished) {
       return;
     }
 
@@ -147,6 +169,10 @@ export function App() {
   }
 
   function startNewGame() {
+    if (!wordleGame) {
+      return;
+    }
+
     setGameState(wordleGame.start());
     setCurrentGuess('');
     setErrorMessage('');
@@ -166,37 +192,45 @@ export function App() {
           ?
         </button>
 
-        <section className="game-stage" aria-label="Plateau Wordle">
-          <GameGrid rows={rows} />
-
-          <section className="status-panel" aria-label="Etat de la partie">
-            <p className="attempts">{gameState.remainingAttempts} tentative(s)</p>
-
-            {gameState.status === 'WON' && <p className="message message--success">Bravo, mot trouvé !</p>}
-            {gameState.status === 'LOST' && (
-              <p className="message message--loss">Perdu ! Le mot était : {gameState.secretWord}</p>
-            )}
-            {errorMessage && <p className="message message--error">{errorMessage}</p>}
+        {!gameState ? (
+          <section className="loading-panel" aria-live="polite">
+            Chargement du dictionnaire...
           </section>
+        ) : (
+          <>
+            <section className="game-stage" aria-label="Plateau Wordle">
+              <GameGrid rows={rows} />
 
-          <form className="verify-form" onSubmit={handleSubmit}>
-            <button className="verify-button" disabled={isGameFinished} type="submit">
-              VÉRIFIER
-            </button>
-          </form>
+              <section className="status-panel" aria-label="Etat de la partie">
+                <p className="attempts">{gameState.remainingAttempts} tentative(s)</p>
 
-          {isGameFinished && (
-            <button className="new-game-button" onClick={startNewGame} type="button">
-              Nouvelle partie
-            </button>
-          )}
-        </section>
+                {gameState.status === 'WON' && <p className="message message--success">Bravo, mot trouvé !</p>}
+                {gameState.status === 'LOST' && (
+                  <p className="message message--loss">Perdu ! Le mot était : {gameState.secretWord}</p>
+                )}
+                {errorMessage && <p className="message message--error">{errorMessage}</p>}
+              </section>
 
-        <VirtualKeyboard
-          disabled={isGameFinished}
-          feedbacks={keyboardFeedbacks}
-          onKeyPress={handleKeyboardKey}
-        />
+              <form className="verify-form" onSubmit={handleSubmit}>
+                <button className="verify-button" disabled={isGameFinished} type="submit">
+                  VÉRIFIER
+                </button>
+              </form>
+
+              {isGameFinished && (
+                <button className="new-game-button" onClick={startNewGame} type="button">
+                  Nouvelle partie
+                </button>
+              )}
+            </section>
+
+            <VirtualKeyboard
+              disabled={isGameFinished}
+              feedbacks={keyboardFeedbacks}
+              onKeyPress={handleKeyboardKey}
+            />
+          </>
+        )}
       </div>
 
       {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}

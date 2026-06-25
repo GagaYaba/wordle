@@ -12,6 +12,10 @@ Après chaque tentative, chaque lettre reçoit un feedback :
 
 L'application est jouable dans le navigateur via une interface web React.
 
+Le dictionnaire de jeu charge une liste distante de mots français, filtre les mots de 5 lettres côté client, et conserve un fallback local pour rester jouable si la source distante est indisponible.
+
+La source distante utilisée est `https://raw.githubusercontent.com/Taknok/French-Wordlist/master/francais.txt`.
+
 Une règle importante concerne les lettres multiples : si une lettre est proposée plusieurs fois mais qu'elle existe moins de fois dans le mot secret, seules les occurrences disponibles peuvent être marquées `CORRECT` ou `MISPLACED`. Les occurrences en trop sont marquées `ABSENT`.
 
 ## Choix techniques
@@ -74,6 +78,7 @@ Les tests vérifient :
 - la défaite après 6 tentatives ;
 - les erreurs métier ;
 - l'injection du dictionnaire ;
+- le chargement de mots via une liste distante avec des mocks réseau déterministes ;
 - le comportement déterministe grâce aux doublures de test.
 
 ```bash
@@ -105,6 +110,8 @@ src/
 
   infrastructure/
     in-memory-dictionary.ts
+    default-french-words.ts
+    french-word-list-loader.ts
 
   web/
     App.tsx
@@ -120,13 +127,14 @@ tests/
     errors.test.ts
   infrastructure/
     in-memory-dictionary.test.ts
+    french-word-list-loader.test.ts
   web/
     app.test.tsx
   setup.test.ts
 ```
 
 - `src/domain` contient la logique métier pure.
-- `src/infrastructure` contient les implémentations techniques, comme le dictionnaire en mémoire.
+- `src/infrastructure` contient les implémentations techniques, comme le dictionnaire en mémoire, le fallback local et le chargement de mots via liste distante.
 - `src/web` contient l'interface React.
 - `tests/domain` contient les tests unitaires du domaine.
 - `tests/infrastructure` contient les tests des implémentations techniques.

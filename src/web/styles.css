@@ -130,6 +130,15 @@ button {
   gap: var(--stage-gap);
 }
 
+.loading-panel {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  color: rgba(219, 229, 239, 0.72);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
 .game-board {
   width: min(100%, calc((var(--tile-size) * 5) + (var(--tile-gap) * 4)));
   display: grid;
