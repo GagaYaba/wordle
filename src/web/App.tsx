@@ -46,13 +46,17 @@ export function App() {
   const [currentGuess, setCurrentGuess] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [hintsEnabled, setHintsEnabled] = useState(true);
   const [selectedWordLength, setSelectedWordLength] = useState<WordLength>(DEFAULT_WORD_LENGTH);
   const [lastSubmittedRowIndex, setLastSubmittedRowIndex] = useState<number | null>(null);
   const [invalidRowIndex, setInvalidRowIndex] = useState<number | null>(null);
   const [invalidAttemptAnimationKey, setInvalidAttemptAnimationKey] = useState(0);
 
   const isGameFinished = gameState?.status !== 'IN_PROGRESS';
-  const rows = useMemo(() => (gameState ? buildGridRows(gameState, currentGuess) : []), [currentGuess, gameState]);
+  const rows = useMemo(
+    () => (gameState ? buildGridRows(gameState, currentGuess, hintsEnabled) : []),
+    [currentGuess, gameState, hintsEnabled],
+  );
   const keyboardFeedbacks = useMemo(() => (gameState ? buildKeyboardFeedbacks(gameState) : {}), [gameState]);
 
   useEffect(() => {
@@ -214,6 +218,16 @@ export function App() {
       <div className="game-container">
         <div className="game-side-controls">
           <button
+            className={`hint-toggle-button${hintsEnabled ? ' hint-toggle-button--active' : ''}`}
+            type="button"
+            aria-label={hintsEnabled ? 'Masquer les lettres en surbrillance' : 'Afficher les lettres en surbrillance'}
+            aria-pressed={hintsEnabled}
+            onClick={() => setHintsEnabled((enabled) => !enabled)}
+          >
+            <LightbulbIcon />
+          </button>
+
+          <button
             className="help-floating-button"
             type="button"
             aria-label="Ouvrir l'aide"
@@ -274,6 +288,17 @@ export function App() {
 
       {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
     </main>
+  );
+}
+
+function LightbulbIcon() {
+  return (
+    <svg className="hint-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M9 18h6" />
+      <path d="M10 22h4" />
+      <path d="M12 2a7 7 0 0 0-4 12.74V16h8v-1.26A7 7 0 0 0 12 2Z" />
+      <path d="M9.5 9.5a2.5 2.5 0 0 1 5 0" />
+    </svg>
   );
 }
 
@@ -516,8 +541,8 @@ function VirtualKeyboard({
   );
 }
 
-function buildGridRows(gameState: GameState, currentGuess: string): Tile[][] {
-  const confirmedLetters = buildConfirmedLetters(gameState);
+function buildGridRows(gameState: GameState, currentGuess: string, hintsEnabled: boolean): Tile[][] {
+  const confirmedLetters = hintsEnabled ? buildConfirmedLetters(gameState) : {};
   const playedRows = gameState.attempts.map((attempt) =>
     attempt.letters.map((letterResult) => ({
       letter: letterResult.letter,

@@ -141,6 +141,70 @@ describe('App confirmed letter hints', () => {
     expect(within(getGameBoard(4)).queryByLabelText('E indice confirme')).not.toBeInTheDocument();
     expect(within(getGameBoard(4)).getAllByLabelText(/case vide/i)).toHaveLength(24);
   });
+
+  it('Given a confirmed letter hint is visible, When the user disables hints, Then the hint should be hidden', async () => {
+    // Given
+    await renderLoadedApp();
+    clickVirtualKeyboardWord('POMME');
+    submitCurrentGuess();
+
+    // When
+    fireEvent.click(getHintToggleButton());
+
+    // Then
+    expect(getHintToggleButton()).toHaveAttribute('aria-pressed', 'false');
+    expect(within(getGameBoard(5)).queryByLabelText('E indice confirme')).not.toBeInTheDocument();
+    expect(within(getGameBoard(5)).getByLabelText('E CORRECT')).toBeInTheDocument();
+  });
+
+  it('Given hints are disabled, When the user enables hints again, Then the hint should be visible again', async () => {
+    // Given
+    await renderLoadedApp();
+    clickVirtualKeyboardWord('POMME');
+    submitCurrentGuess();
+    fireEvent.click(getHintToggleButton());
+
+    // When
+    fireEvent.click(getHintToggleButton());
+
+    // Then
+    expect(getHintToggleButton()).toHaveAttribute('aria-pressed', 'true');
+    expect(within(getGameBoard(5)).getByLabelText('E indice confirme')).toBeInTheDocument();
+  });
+
+  it('Given the player has typed letters in the active row, When the user disables hints, Then the current guess should be preserved', async () => {
+    // Given
+    await renderLoadedApp();
+    clickVirtualKeyboardWord('POMME');
+    submitCurrentGuess();
+    clickVirtualKeyboardWord('MOUT');
+
+    // When
+    fireEvent.click(getHintToggleButton());
+
+    // Then
+    expect(within(getGameBoard(5)).getByLabelText('T')).toBeInTheDocument();
+    expect(within(getGameBoard(5)).queryByLabelText('E indice confirme')).not.toBeInTheDocument();
+  });
+
+  it('Given hints are disabled, When the user starts a new game, Then hints should remain disabled', async () => {
+    // Given
+    await renderLoadedApp();
+    fireEvent.click(getHintToggleButton());
+    clickVirtualKeyboardWord('POMME');
+    submitCurrentGuess();
+    clickVirtualKeyboardWord('LIVRE');
+    submitCurrentGuess();
+
+    // When
+    fireEvent.click(screen.getByRole('button', { name: /nouvelle partie/i }));
+    clickVirtualKeyboardWord('POMME');
+    submitCurrentGuess();
+
+    // Then
+    expect(getHintToggleButton()).toHaveAttribute('aria-pressed', 'false');
+    expect(within(getGameBoard(5)).queryByLabelText('E indice confirme')).not.toBeInTheDocument();
+  });
 });
 
 class FakeDictionary implements Dictionary {
@@ -193,6 +257,10 @@ function clickVirtualKeyboardWord(word: string) {
 
 function submitCurrentGuess() {
   fireEvent.click(screen.getByRole('button', { name: /v.rifier/i }));
+}
+
+function getHintToggleButton() {
+  return screen.getByRole('button', { name: /lettres en surbrillance/i });
 }
 
 function getGameBoard(wordLength: WordLength) {
